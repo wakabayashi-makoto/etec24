@@ -33,6 +33,7 @@
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
+    padding-top: var(--header-h);
   }
 
   /* ─── Header ─────────────────────────────── */
@@ -40,11 +41,14 @@
     height: var(--header-h);
     background: linear-gradient(to left, rgba(245,197,24,0.40) 0%, rgba(245,197,24,0.15) 55%, #ffffff 100%);
     border-bottom: 2px solid #f5c518;
+    display: -webkit-flex;
     display: flex;
     align-items: center;
     padding: 0 12px 0 0;
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 100;
     gap: 0;
   }
@@ -114,10 +118,13 @@
     border-right: 2px solid #d0d5e0;
     padding: 20px 0;
     flex-shrink: 0;
-    position: sticky;
+    position: fixed;
     top: var(--header-h);
+    left: 0;
     height: calc(100vh - var(--header-h));
     overflow-y: auto;
+    z-index: 10;
+    -webkit-overflow-scrolling: touch;
   }
   .sidebar-label {
     font-size: 10px;
@@ -164,17 +171,17 @@
     padding: 20px 16px;
     max-width: 860px;
     min-width: 0;
+    margin-left: 110px;
   }
 
   @media (max-width: 600px) {
     .sidebar { width: 90px; }
     .nav-item { padding: 12px 4px 12px 6px; font-size: 10.5px; }
     .sidebar-label { display: none; }
-    .main { padding: 16px 10px; }
+    .main { padding: 16px 10px; margin-left: 90px; }
   }
 
-  .page { display: none; }
-  .page.active { display: block; }
+  .page { display: none; }  /* JS側でstyle.displayを直接操作 */
 
   .page-title {
     font-family: 'Noto Serif JP', serif;
@@ -455,16 +462,16 @@
   <!-- Sidebar -->
   <nav class="sidebar">
     <div class="sidebar-label">シート</div>
-    <button type="button" class="nav-item active" onclick="switchPage('kiho')">基本事項</button>
-    <button type="button" class="nav-item" onclick="switchPage('kouatsu')">高圧受電盤</button>
-    <button type="button" class="nav-item" onclick="switchPage('denryoku')">電力量計</button>
-    <button type="button" class="nav-item" onclick="switchPage('hijo')">非常用予備発電</button>
-    <button type="button" class="nav-item" onclick="switchPage('tr')">Tr運転記録</button>
-    <button type="button" class="nav-item" onclick="switchPage('scsr')">機器温度</button>
-    <button type="button" class="nav-item" onclick="switchPage('tenken')">点検結果</button>
-    <button type="button" class="nav-item" onclick="switchPage('tenken2')">点検結果詳細</button>
-    <button type="button" class="nav-item" onclick="switchPage('shiteki')">指摘事項</button>
-    <button type="button" class="nav-item" onclick="switchPage('kennin')">検&emsp;印</button>
+    <button type="button" class="nav-item active" onclick="switchPage('kiho',this)">基本事項</button>
+    <button type="button" class="nav-item" onclick="switchPage('kouatsu',this)">高圧受電盤</button>
+    <button type="button" class="nav-item" onclick="switchPage('denryoku',this)">電力量計</button>
+    <button type="button" class="nav-item" onclick="switchPage('hijo',this)">非常用予備発電</button>
+    <button type="button" class="nav-item" onclick="switchPage('tr',this)">Tr運転記録</button>
+    <button type="button" class="nav-item" onclick="switchPage('scsr',this)">機器温度</button>
+    <button type="button" class="nav-item" onclick="switchPage('tenken',this)">点検結果</button>
+    <button type="button" class="nav-item" onclick="switchPage('tenken2',this)">点検結果詳細</button>
+    <button type="button" class="nav-item" onclick="switchPage('shiteki',this)">指摘事項</button>
+    <button type="button" class="nav-item" onclick="switchPage('kennin',this)">検&emsp;印</button>
     <div style="padding:10px 14px;">
       <button onclick="showExcelVersionDialog()" style="width:100%;padding:8px 4px;background:linear-gradient(135deg,#217346,#1e6b3e);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">📊 Excel出力</button>
     </div>
@@ -545,6 +552,8 @@
               <option value="曇">曇</option>
               <option value="雨">雨</option>
               <option value="小雨">小雨</option>
+              <option value="雪">雪</option>
+              <option value="小雪">小雪</option>
             </select>
           </div>
           <div class="form-grid" style="margin:0;">
@@ -1332,7 +1341,7 @@ async function exportToExcel() {
     for (let i=1; i<=9; i++) {
       currentData.SCSR温度.push({
         機器: document.getElementById('scsr_name_'+i)?.value||'',
-        Kvar: document.getElementById('scsr_kvar_'+i)?.value||'',
+        kvar: document.getElementById('scsr_kvar_'+i)?.value||'',
         温度: document.getElementById('scsr_temp_'+i)?.value||'',
       });
     }
@@ -1754,7 +1763,7 @@ async function exportToExcel() {
         for (let i=1; i<=9; i++) {
           const r = 17+i;
           const scsrName = document.getElementById('scsr_name_'+i)?.value || '';
-          const scsrKvar = document.getElementById('scsr_kvar_'+i)?.value || '';
+          const scsrkvar = document.getElementById('scsr_kvar_'+i)?.value || '';
           const scsrTemp = document.getElementById('scsr_temp_'+i)?.value || '';
           if (scsrName.startsWith('(')) {
             // （）付き → CH:CL・CM:CQ・CR:CVの3結合を解除してCH:CV1つに結合
@@ -1766,7 +1775,7 @@ async function exportToExcel() {
           } else {
             // 空でもscsrLeftSidでゴシック太字スタイルを設定
             xml = setCellS(xml, 'CH'+r, scsrName, String(scsrLeftSid));
-            xml = setCell(xml, 'CM'+r, scsrKvar);
+            xml = setCell(xml, 'CM'+r, scsrkvar);
             xml = setCell(xml, 'CR'+r, scsrTemp);
           }
         }
@@ -2072,7 +2081,7 @@ async function exportToExcel() {
       if(trEmpty(trs[3])) lines.push(makeLine(68,16,51,26));
       if(trEmpty(trs[4])) lines.push(makeLine(85,16,68,26));
       // 機器・全空白（CV17→CH26）
-      if(scsr.every(s=>(s['機器']||'')===''&&(s['Kvar']||'')===''&&(s['温度']||'')===''))
+      if(scsr.every(s=>(s['機器']||'')===''&&(s['kvar']||'')===''&&(s['温度']||'')===''))
         lines.push(makeLine(100,16,85,26));
       // 点検結果引込〜高圧電線（AX28→A46、0〜17）
       if(kekka.slice(0,18).every(k=>(k['判定']||'')==='')) lines.push(makeLine(50,27,0,46));
@@ -2390,16 +2399,31 @@ window.onerror = function(msg, src, line, col, err) {
   return false;
 };
 // ── Page Switch ───────────────────────────────────────
-function switchPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-  event.currentTarget.classList.add('active');
-  // ページ先頭にスクロール
+function switchPage(id, el) {
+  // style.displayを直接操作（iOS Safari対応）
+  document.querySelectorAll('.page').forEach(function(p) {
+    p.style.display = 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(function(n) {
+    n.classList.remove('active');
+  });
+  var targetPage = document.getElementById('page-' + id);
+  if (targetPage) {
+    targetPage.style.display = 'block';
+  }
+  if (el) {
+    el.classList.add('active');
+  } else {
+    var navBtns = document.querySelectorAll('.nav-item');
+    navBtns.forEach(function(b) {
+      if (b.getAttribute('onclick') && b.getAttribute('onclick').indexOf(id) !== -1) {
+        b.classList.add('active');
+      }
+    });
+  }
   window.scrollTo(0, 0);
-  const main = document.querySelector('.main');
+  var main = document.querySelector('.main');
   if (main) main.scrollTop = 0;
-  // 検印ページ表示時にキャンバスサイズを初期化
   if (id === 'kennin' && typeof resizeSignCanvas === 'function') {
     setTimeout(resizeSignCanvas, 50);
   }
@@ -2458,7 +2482,7 @@ function calcDenryoku() {
   let days = '';
   if (dPrev && dNow) {
     const diff = Math.round((dNow - dPrev) / 86400000);
-    days = diff > 0 ? diff + 1 : '';
+    days = diff > 0 ? diff : '';
   }
   document.getElementById('dm_days').value = days;
 
@@ -2639,7 +2663,7 @@ for (let i = 1; i <= 9; i++) {
         </select>
       </div>
       <div style="flex:1; min-width:60px;">
-        <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px; font-weight:600;">Kvar</div>
+        <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px; font-weight:600;">kvar</div>
         <input type="text" inputmode="decimal" id="scsr_kvar_${i}"
           oninput="formatDecimalInput(this,3,2)"
           style="display:block; width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; font-size:16px; font-weight:600; padding:10px 8px; text-align:right; outline:none;">
@@ -2747,7 +2771,11 @@ function applyDateComposition(root) {
     });
   });
 }
-document.addEventListener('DOMContentLoaded', function() { applyDateComposition(); });
+document.addEventListener('DOMContentLoaded', function() {
+  applyDateComposition();
+  // 起動時に基本事項を表示
+  switchPage('kiho', document.querySelector('.nav-item'));
+});
 
 function datePartInput(el, curId, nextId, maxLen, hiddenId, callback) {
   // IME入力中は処理しない
@@ -3066,7 +3094,7 @@ function exportExcel() {
     for (let i=1; i<=9; i++) {
       data.SCSR温度.push({
         機器: document.getElementById('scsr_name_'+i)?.value||'機器'+i,
-        Kvar: document.getElementById('scsr_kvar_'+i)?.value||'',
+        kvar: document.getElementById('scsr_kvar_'+i)?.value||'',
         温度: document.getElementById('scsr_temp_'+i)?.value||'',
       });
     }
@@ -3289,7 +3317,7 @@ function _imp5(d){
 }
 function _imp6(d){
   (d['SCSR温度']||[]).forEach(function(s,idx){
-    const i=idx+1;_sv('scsr_name_'+i,s['機器']);_sv('scsr_kvar_'+i,s['Kvar']);_sv('scsr_temp_'+i,s['温度']);
+    const i=idx+1;_sv('scsr_name_'+i,s['機器']);_sv('scsr_kvar_'+i,s['kvar']);_sv('scsr_temp_'+i,s['温度']);
   });
 }
 function _imp7(d){
@@ -3705,12 +3733,22 @@ function loadHankoPhoto(input) {
       var s = Math.min(img.width, img.height);
       var ox = (img.width-s)/2, oy = (img.height-s)/2;
       tc.drawImage(img, ox, oy, s, s, 0, 0, sz, sz);
-      // 白・明るい部分を透明に
+      // 白抜き：明度で判定、インク濃度に応じてアルファ調整
       var id = tc.getImageData(0,0,sz,sz);
       for(var i=0;i<id.data.length;i+=4){
         var r=id.data[i],g=id.data[i+1],b=id.data[i+2];
-        if(r>200&&g>200&&b>200){id.data[i+3]=0;}
-        else { id.data[i]=180;id.data[i+1]=0;id.data[i+2]=0; }
+        var brightness = (r*0.299 + g*0.587 + b*0.114);
+        if(brightness > 180){
+          // 明るい部分→透明（白背景）
+          id.data[i+3] = 0;
+        } else {
+          // 暗い部分→赤に変換、濃度を保持
+          var intensity = 1 - brightness/180;
+          id.data[i]   = 204;  // 赤
+          id.data[i+1] = 0;
+          id.data[i+2] = 0;
+          id.data[i+3] = Math.round(255 * Math.min(1, intensity * 1.5));
+        }
       }
       tc.putImageData(id,0,0);
       _hankoPhotoB64 = tmpCanvas.toDataURL('image/png');
@@ -3902,7 +3940,7 @@ function initAllFields() {
   setTimeout(function(){ t.classList.remove('show'); }, 3000);
 
   // 基本事項ページに戻る
-  switchPage('kiho');
+  switchPage('kiho', document.querySelector('.nav-item'));
 }
 
 // ── JSON保存のみ（保存ボタン用）─────────────────────────
@@ -3997,7 +4035,7 @@ function exportJsonOnly() {
     for (let i=1; i<=9; i++) {
       data.SCSR温度.push({
         機器:document.getElementById('scsr_name_'+i)?.value||'',
-        Kvar:document.getElementById('scsr_kvar_'+i)?.value||'',
+        kvar:document.getElementById('scsr_kvar_'+i)?.value||'',
         温度:document.getElementById('scsr_temp_'+i)?.value||'',
       });
     }
