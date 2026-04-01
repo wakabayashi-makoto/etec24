@@ -552,6 +552,8 @@
               <option value="曇">曇</option>
               <option value="雨">雨</option>
               <option value="小雨">小雨</option>
+              <option value="雪">雪</option>
+              <option value="小雪">小雪</option>
             </select>
           </div>
           <div class="form-grid" style="margin:0;">
@@ -1339,7 +1341,7 @@ async function exportToExcel() {
     for (let i=1; i<=9; i++) {
       currentData.SCSR温度.push({
         機器: document.getElementById('scsr_name_'+i)?.value||'',
-        Kvar: document.getElementById('scsr_kvar_'+i)?.value||'',
+        kvar: document.getElementById('scsr_kvar_'+i)?.value||'',
         温度: document.getElementById('scsr_temp_'+i)?.value||'',
       });
     }
@@ -1761,7 +1763,7 @@ async function exportToExcel() {
         for (let i=1; i<=9; i++) {
           const r = 17+i;
           const scsrName = document.getElementById('scsr_name_'+i)?.value || '';
-          const scsrKvar = document.getElementById('scsr_kvar_'+i)?.value || '';
+          const scsrkvar = document.getElementById('scsr_kvar_'+i)?.value || '';
           const scsrTemp = document.getElementById('scsr_temp_'+i)?.value || '';
           if (scsrName.startsWith('(')) {
             // （）付き → CH:CL・CM:CQ・CR:CVの3結合を解除してCH:CV1つに結合
@@ -1773,7 +1775,7 @@ async function exportToExcel() {
           } else {
             // 空でもscsrLeftSidでゴシック太字スタイルを設定
             xml = setCellS(xml, 'CH'+r, scsrName, String(scsrLeftSid));
-            xml = setCell(xml, 'CM'+r, scsrKvar);
+            xml = setCell(xml, 'CM'+r, scsrkvar);
             xml = setCell(xml, 'CR'+r, scsrTemp);
           }
         }
@@ -2079,7 +2081,7 @@ async function exportToExcel() {
       if(trEmpty(trs[3])) lines.push(makeLine(68,16,51,26));
       if(trEmpty(trs[4])) lines.push(makeLine(85,16,68,26));
       // 機器・全空白（CV17→CH26）
-      if(scsr.every(s=>(s['機器']||'')===''&&(s['Kvar']||'')===''&&(s['温度']||'')===''))
+      if(scsr.every(s=>(s['機器']||'')===''&&(s['kvar']||'')===''&&(s['温度']||'')===''))
         lines.push(makeLine(100,16,85,26));
       // 点検結果引込〜高圧電線（AX28→A46、0〜17）
       if(kekka.slice(0,18).every(k=>(k['判定']||'')==='')) lines.push(makeLine(50,27,0,46));
@@ -2480,7 +2482,7 @@ function calcDenryoku() {
   let days = '';
   if (dPrev && dNow) {
     const diff = Math.round((dNow - dPrev) / 86400000);
-    days = diff > 0 ? diff + 1 : '';
+    days = diff > 0 ? diff : '';
   }
   document.getElementById('dm_days').value = days;
 
@@ -2661,7 +2663,7 @@ for (let i = 1; i <= 9; i++) {
         </select>
       </div>
       <div style="flex:1; min-width:60px;">
-        <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px; font-weight:600;">Kvar</div>
+        <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px; font-weight:600;">kvar</div>
         <input type="text" inputmode="decimal" id="scsr_kvar_${i}"
           oninput="formatDecimalInput(this,3,2)"
           style="display:block; width:100%; box-sizing:border-box; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; font-size:16px; font-weight:600; padding:10px 8px; text-align:right; outline:none;">
@@ -3092,7 +3094,7 @@ function exportExcel() {
     for (let i=1; i<=9; i++) {
       data.SCSR温度.push({
         機器: document.getElementById('scsr_name_'+i)?.value||'機器'+i,
-        Kvar: document.getElementById('scsr_kvar_'+i)?.value||'',
+        kvar: document.getElementById('scsr_kvar_'+i)?.value||'',
         温度: document.getElementById('scsr_temp_'+i)?.value||'',
       });
     }
@@ -3315,7 +3317,7 @@ function _imp5(d){
 }
 function _imp6(d){
   (d['SCSR温度']||[]).forEach(function(s,idx){
-    const i=idx+1;_sv('scsr_name_'+i,s['機器']);_sv('scsr_kvar_'+i,s['Kvar']);_sv('scsr_temp_'+i,s['温度']);
+    const i=idx+1;_sv('scsr_name_'+i,s['機器']);_sv('scsr_kvar_'+i,s['kvar']);_sv('scsr_temp_'+i,s['温度']);
   });
 }
 function _imp7(d){
@@ -4033,7 +4035,7 @@ function exportJsonOnly() {
     for (let i=1; i<=9; i++) {
       data.SCSR温度.push({
         機器:document.getElementById('scsr_name_'+i)?.value||'',
-        Kvar:document.getElementById('scsr_kvar_'+i)?.value||'',
+        kvar:document.getElementById('scsr_kvar_'+i)?.value||'',
         温度:document.getElementById('scsr_temp_'+i)?.value||'',
       });
     }
