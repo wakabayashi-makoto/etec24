@@ -641,6 +641,7 @@
               <option value="" selected></option>
               <option value="進み">進み</option>
               <option value="遅れ">遅れ</option>
+              <option value="未計測">未計測</option>
             </select>
           </div>
           <div class="field">
@@ -1683,15 +1684,29 @@ async function exportToExcel() {
         xml = setCell(xml, 'CI7', tempVal);
 
         // 高圧受電盤
-        xml = setCell(xml, 'D11', document.getElementById('kp_vrs')?.value);
-        xml = setCell(xml, 'D12', document.getElementById('kp_vst')?.value);
-        xml = setCell(xml, 'D13', document.getElementById('kp_vtr')?.value);
-        xml = setCell(xml, 'L11', document.getElementById('kp_ir')?.value);
-        xml = setCell(xml, 'L12', document.getElementById('kp_is')?.value);
-        xml = setCell(xml, 'L13', document.getElementById('kp_it')?.value);
-        xml = setCell(xml, 'F14', document.getElementById('kp_kw')?.value);
-        xml = setCell(xml, 'F15', document.getElementById('kp_pf_type')?.value);
-        xml = setCell(xml, 'L15', document.getElementById('kp_pf_select')?.value);
+        // 高圧受電盤：斜線条件チェック（電圧・電流・電力全空白 かつ 力率CL空白or未計測）
+        var kpIds = ['kp_vrs','kp_vst','kp_vtr','kp_ir','kp_is','kp_it','kp_kw'];
+        var kpActive = kpIds.some(function(id){ return !!(document.getElementById(id)?.value||'').trim(); });
+        var kpPfType = (document.getElementById('kp_pf_type')?.value||'').trim();
+        var kpPfVal  = (document.getElementById('kp_pf_select')?.value||'').trim();
+        var kpPfEmpty = kpPfType==='' || kpPfType==='未計測';
+        var kpDiag = !kpActive && kpPfEmpty; // 斜線条件
+        if (!kpDiag) {
+          // 斜線なし：各フィールド出力（空白は'----'）
+          var kpFv = function(id){ var v=(document.getElementById(id)?.value||'').trim(); return v==='' ? '----' : v; };
+          xml = setCell(xml, 'D11', kpFv('kp_vrs'));
+          xml = setCell(xml, 'D12', kpFv('kp_vst'));
+          xml = setCell(xml, 'D13', kpFv('kp_vtr'));
+          xml = setCell(xml, 'L11', kpFv('kp_ir'));
+          xml = setCell(xml, 'L12', kpFv('kp_is'));
+          xml = setCell(xml, 'L13', kpFv('kp_it'));
+          xml = setCell(xml, 'F14', kpFv('kp_kw'));
+          // 力率(C/L)：未計測→「未計測」、空白→「----」
+          xml = setCell(xml, 'F15', kpPfType==='未計測' ? '未計測' : (kpPfType==='' ? '----' : kpPfType));
+          // 力率%：未計測なら無条件「----」
+          xml = setCell(xml, 'L15', kpPfType==='未計測' ? '----' : (kpPfVal==='' ? '----' : kpPfVal));
+        }
+        // 斜線条件成立時は全セル空白（何も書かない）→斜線のみ
 
         // 電力量計
         xml = setCell(xml, 'X11',  document.getElementById('dm_now')?.value);
@@ -1746,17 +1761,22 @@ async function exportToExcel() {
           }
           xml = setCell(xml, m.cap,   document.getElementById('tr'+m.n+'_capacity')?.value);
           xml = setCell(xml, m.rated, document.getElementById('tr'+m.n+'_rated')?.value);
-          xml = setCell(xml, m.vrs,   document.getElementById('tr'+m.n+'_vrs')?.value);
-          xml = setCell(xml, m.vst,   document.getElementById('tr'+m.n+'_vst')?.value);
-          xml = setCell(xml, m.vtr,   document.getElementById('tr'+m.n+'_vtr')?.value);
-          xml = setCell(xml, m.ir,    document.getElementById('tr'+m.n+'_ir')?.value);
-          xml = setCell(xml, m.is,    document.getElementById('tr'+m.n+'_is')?.value);
-          xml = setCell(xml, m.it,    document.getElementById('tr'+m.n+'_it')?.value);
-          xml = setCell(xml, m.max,   document.getElementById('tr'+m.n+'_max')?.value);
+          // 電圧・電流・最大電流・利用率：Tr使用中で値が空/0なら'----'
+          var trActive = !!phaseVal;
+          var dash = '----';
+          var fv = function(id){ var v=(document.getElementById(id)?.value||'').trim(); return trActive&&v==='' ? dash : v; };
+          xml = setCell(xml, m.vrs,   fv('tr'+m.n+'_vrs'));
+          xml = setCell(xml, m.vst,   fv('tr'+m.n+'_vst'));
+          xml = setCell(xml, m.vtr,   fv('tr'+m.n+'_vtr'));
+          xml = setCell(xml, m.ir,    fv('tr'+m.n+'_ir'));
+          xml = setCell(xml, m.is,    fv('tr'+m.n+'_is'));
+          xml = setCell(xml, m.it,    fv('tr'+m.n+'_it'));
+          xml = setCell(xml, m.max,   fv('tr'+m.n+'_max'));
           xml = setCell(xml, m.io,    document.getElementById('tr'+m.n+'_io')?.value);
           xml = setCell(xml, m.ma,    document.getElementById('tr'+m.n+'_ma')?.value);
-          xml = setCell(xml, m.temp,  document.getElementById('tr'+m.n+'_temp')?.value);
-          var utilVal = (document.getElementById('tr'+m.n+'_util')?.textContent||'').replace(' %','').replace('%',''); xml = setCell(xml, m.util, (utilVal==='—'||utilVal==='') ? '' : utilVal);
+          xml = setCell(xml, m.temp,  fv('tr'+m.n+'_temp'));
+          var utilVal = (document.getElementById('tr'+m.n+'_util')?.textContent||'').replace(' %','').replace('%','');
+          xml = setCell(xml, m.util, trActive&&(utilVal==='—'||utilVal==='') ? dash : (utilVal||''));
         });
 
         // 機器温度 SCSR 1〜9 → 行18〜26
@@ -1874,17 +1894,22 @@ async function exportToExcel() {
           }
           xml = setCell(xml, m.cap,   document.getElementById('tr'+m.n+'_capacity')?.value);
           xml = setCell(xml, m.rated, document.getElementById('tr'+m.n+'_rated')?.value);
-          xml = setCell(xml, m.vrs,   document.getElementById('tr'+m.n+'_vrs')?.value);
-          xml = setCell(xml, m.vst,   document.getElementById('tr'+m.n+'_vst')?.value);
-          xml = setCell(xml, m.vtr,   document.getElementById('tr'+m.n+'_vtr')?.value);
-          xml = setCell(xml, m.ir,    document.getElementById('tr'+m.n+'_ir')?.value);
-          xml = setCell(xml, m.is,    document.getElementById('tr'+m.n+'_is')?.value);
-          xml = setCell(xml, m.it,    document.getElementById('tr'+m.n+'_it')?.value);
-          xml = setCell(xml, m.max,   document.getElementById('tr'+m.n+'_max')?.value);
+          // 電圧・電流・最大電流・利用率：Tr使用中で値が空/0なら'----'
+          var trActive = !!phaseVal;
+          var dash = '----';
+          var fv = function(id){ var v=(document.getElementById(id)?.value||'').trim(); return trActive&&v==='' ? dash : v; };
+          xml = setCell(xml, m.vrs,   fv('tr'+m.n+'_vrs'));
+          xml = setCell(xml, m.vst,   fv('tr'+m.n+'_vst'));
+          xml = setCell(xml, m.vtr,   fv('tr'+m.n+'_vtr'));
+          xml = setCell(xml, m.ir,    fv('tr'+m.n+'_ir'));
+          xml = setCell(xml, m.is,    fv('tr'+m.n+'_is'));
+          xml = setCell(xml, m.it,    fv('tr'+m.n+'_it'));
+          xml = setCell(xml, m.max,   fv('tr'+m.n+'_max'));
           xml = setCell(xml, m.io,    document.getElementById('tr'+m.n+'_io')?.value);
           xml = setCell(xml, m.ma,    document.getElementById('tr'+m.n+'_ma')?.value);
-          xml = setCell(xml, m.temp,  document.getElementById('tr'+m.n+'_temp')?.value);
-          var utilVal = (document.getElementById('tr'+m.n+'_util')?.textContent||'').replace(' %','').replace('%',''); xml = setCell(xml, m.util, (utilVal==='—'||utilVal==='') ? '' : utilVal);
+          xml = setCell(xml, m.temp,  fv('tr'+m.n+'_temp'));
+          var utilVal = (document.getElementById('tr'+m.n+'_util')?.textContent||'').replace(' %','').replace('%','');
+          xml = setCell(xml, m.util, trActive&&(utilVal==='—'||utilVal==='') ? dash : (utilVal||''));
         });
       }
 
@@ -2065,7 +2090,10 @@ async function exportToExcel() {
       }
       var lines = [];
       // 高圧受電盤・全空白（R9→A15）
-      if(['電圧RS','電圧ST','電圧TR','電流R','電流S','電流T','電力KW','力率CL','力率'].every(k=>(kp[k]||'')===''))
+      // 高圧受電盤斜線：電圧・電流・電力が全空白 かつ 力率(C/L)が空白or未計測
+      var kpMainEmpty = ['電圧RS','電圧ST','電圧TR','電流R','電流S','電流T','電力KW'].every(k=>(kp[k]||'')==='');
+      var kpPfEmpty = (kp['力率CL']||'')==='未計測' || (kp['力率CL']||'')==='';
+      if(kpMainEmpty && kpPfEmpty)
         lines.push(makeLine(18,8,0,15));
       // 電力量計・全空白（AW9→S15）
       var dmAllEmpty = ['前回検針日','今回検針日','日数','今回全日量','前回全日量','差','乗率','電力量kWh','一日平均kWh','指示','電力KW','力率'].every(k=>(dm[k]||'')==='');
@@ -2618,7 +2646,7 @@ trData.forEach((tr, i) => {
     </div>
     <div class="tr-utilization">
       <span style="color:var(--text-muted); font-size:12px;">利用率（自動計算）</span>
-      <span class="val" id="tr${n}_util">—</span>
+      <span class="val" id="tr${n}_util"></span>
     </div>
   `;
   grid.appendChild(div);
@@ -3928,7 +3956,7 @@ function initAllFields() {
   // Tr利用率（textContent）
   for (var n=1; n<=10; n++) {
     var util = document.getElementById('tr'+n+'_util');
-    if(util) util.textContent = '—';
+    if(util) util.textContent = '';
   }
 
   // セッションバージョンリセット
