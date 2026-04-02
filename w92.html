@@ -724,7 +724,13 @@
               style="font-size:16px; font-weight:600; text-align:right; letter-spacing:0.02em;">
           </div>
           <div class="field">
-            <label>前回全日量</label>
+            <label style="display:flex;align-items:center;gap:8px;">
+              前回全日量
+              <button type="button" onclick="copyNowToPrev()"
+                style="padding:2px 8px;font-size:11px;background:var(--accent);color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:inherit;font-weight:600;">
+                ← 今回をコピー
+              </button>
+            </label>
             <input type="text" inputmode="decimal" id="dm_prev" placeholder="0000.000"
               oninput="formatDecimalInput(this,4,3); calcDenryoku()"
               style="font-size:16px; font-weight:600; text-align:right; letter-spacing:0.02em;">
@@ -3942,6 +3948,15 @@ function generateHankoPng(name) {
 }
 
 // ── 全フィールド初期化 ────────────────────────────────────
+function copyNowToPrev() {
+  var now = document.getElementById('dm_now');
+  var prev = document.getElementById('dm_prev');
+  if (!now || !prev) return;
+  if (!now.value.trim()) { alert('今回全日量が入力されていません。'); return; }
+  prev.value = now.value;
+  calcDenryoku();
+}
+
 function initAllFields() {
   if (!confirm('入力内容を全て初期化します。\nよろしいですか？')) return;
 
