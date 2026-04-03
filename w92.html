@@ -3827,21 +3827,25 @@ function loadHankoPhoto(input) {
       var s = Math.min(img.width, img.height);
       var ox = (img.width-s)/2, oy = (img.height-s)/2;
       tc.drawImage(img, ox, oy, s, s, 0, 0, sz, sz);
-      // 白抜き：明度で判定、インク濃度に応じてアルファ調整
+      // 白抜き：赤系色相で判定（朱肉印影対応）
       var id = tc.getImageData(0,0,sz,sz);
       for(var i=0;i<id.data.length;i+=4){
         var r=id.data[i],g=id.data[i+1],b=id.data[i+2];
         var brightness = (r*0.299 + g*0.587 + b*0.114);
-        if(brightness > 180){
-          // 明るい部分→透明（白背景）
-          id.data[i+3] = 0;
-        } else {
-          // 暗い部分→赤に変換、濃度を保持
-          var intensity = 1 - brightness/180;
-          id.data[i]   = 204;  // 赤
+        // 赤系判定: Rが支配的でGBより大幅に高い場合はインク
+        var isInk = (r > 100) && (r > g * 1.5) && (r > b * 1.5) && brightness < 220;
+        // または非常に暗い部分（黒インク系）
+        var isDark = brightness < 80;
+        if (isInk || isDark) {
+          // インク部分→赤に変換
+          var intensity = isInk ? Math.min(1, (r - Math.max(g,b)) / 150) : (1 - brightness/80);
+          id.data[i]   = 204;
           id.data[i+1] = 0;
           id.data[i+2] = 0;
-          id.data[i+3] = Math.round(255 * Math.min(1, intensity * 1.5));
+          id.data[i+3] = Math.round(255 * Math.min(1, intensity * 2.0));
+        } else {
+          // 背景→透明
+          id.data[i+3] = 0;
         }
       }
       tc.putImageData(id,0,0);
@@ -4386,17 +4390,33 @@ document.addEventListener('keydown', function(e) {
   e.preventDefault();
   // アクティブなページ内のinput/selectのみを対象
   // style.display直接操作対応（classList.activeが付かない場合も対応）
-  const activePage = document.querySelector('.page.active') ||
-    Array.from(document.querySelectorAll('.page')).find(function(p){ return p.style.display !== 'none' && p.style.display !== ''; });
+  var activePage = document.querySelector('.page.active');
+  if (!activePage) {
+    activePage = Array.from(document.querySelectorAll('.page')).find(function(p){
+      return p.style.display === 'block';
+    });
+  }
+  // どのページもblockでない場合はdisplay:noneでないものを探す
+  if (!activePage) {
+    activePage = Array.from(document.querySelectorAll('.page')).find(function(p){
+      return p.style.display !== 'none';
+    });
+  }
   if (!activePage) return;
-  const focusable = Array.from(activePage.querySelectorAll(
+  var focusable = Array.from(activePage.querySelectorAll(
     'input:not([disabled]):not([type="hidden"]):not([type="button"]):not([type="submit"]), select:not([disabled])'
   )).filter(function(el) {
     return el.offsetParent !== null && !el.readOnly;
   });
-  const idx = focusable.indexOf(e.target);
+  // focusableが空の場合はページ全体から検索
+  if (focusable.length === 0) {
+    focusable = Array.from(document.querySelectorAll(
+      'input:not([disabled]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([readonly])'
+    )).filter(function(el){ return el.offsetParent !== null; });
+  }
+  var idx = focusable.indexOf(e.target);
   if (idx >= 0 && idx < focusable.length - 1) {
-    const next = focusable[idx + 1];
+    var next = focusable[idx + 1];
     next.focus();
     if (next.select) next.select();
   }
