@@ -572,7 +572,13 @@
 
     <!-- ── 高圧受電盤 ── -->
     <div class="page" id="page-kouatsu">
-      <div class="page-title">高圧受電盤</div>
+      <div class="page-title" style="display:flex;align-items:center;justify-content:space-between;">
+        高圧受電盤
+        <button type="button" onclick="clearKouatsu()"
+          style="font-size:12px;padding:4px 10px;background:var(--surface2);border:1px solid var(--accent);border-radius:6px;color:var(--accent);font-weight:600;cursor:pointer;font-family:inherit;">
+          入力欄クリア
+        </button>
+      </div>
       <div class="card">
         <div class="card-title">電圧</div>
         <div class="form-grid cols-1">
@@ -707,7 +713,7 @@
             </div>
           </div>
           <div class="field">
-            <label>日数 <span class="unit">（自動計算）</span></label>
+            <label>日数 <span class="unit" style="color:#ef4444;">（自動計算）</span></label>
             <input type="text" id="dm_days" readonly style="font-size:18px; font-weight:600; text-align:right;">
           </div>
         </div>
@@ -736,7 +742,7 @@
               style="font-size:16px; font-weight:600; text-align:right; letter-spacing:0.02em;">
           </div>
           <div class="field">
-            <label>差 <span class="unit">（自動計算）</span></label>
+            <label>差 <span class="unit" style="color:#ef4444;">（自動計算）</span></label>
             <input type="text" id="dm_diff" readonly placeholder="0000.000"
               style="font-size:16px; font-weight:600; text-align:right; color:var(--accent); letter-spacing:0.02em;">
           </div>
@@ -755,12 +761,12 @@
               style="font-size:20px; font-weight:600; text-align:right;">
           </div>
           <div class="field">
-            <label>電力量 <span class="unit">kWh（自動計算）</span></label>
+            <label>電力量 <span class="unit" style="color:#ef4444;">kWh（自動計算）</span></label>
             <input type="text" id="dm_energy" readonly placeholder="0000.000"
               style="font-size:18px; font-weight:600; text-align:right; color:var(--accent);">
           </div>
           <div class="field">
-            <label>1日平均 <span class="unit">kWh（自動計算）</span></label>
+            <label>1日平均 <span class="unit" style="color:#ef4444;">kWh（自動計算）</span></label>
             <input type="text" id="dm_daily" readonly placeholder="0000"
               style="font-size:18px; font-weight:600; text-align:right; color:var(--accent);">
           </div>
@@ -778,7 +784,7 @@
               style="font-size:18px; font-weight:600; text-align:right;">
           </div>
           <div class="field">
-            <label>電力 <span class="unit">KW（自動計算）</span></label>
+            <label>電力 <span class="unit" style="color:#ef4444;">KW（自動計算）</span></label>
             <input type="text" id="dm_kw" readonly
               style="font-size:18px; font-weight:600; text-align:right; color:var(--accent);">
           </div>
@@ -930,13 +936,25 @@
 
     <!-- ── Tr運転記録 ── -->
     <div class="page" id="page-tr">
-      <div class="page-title">Tr運転記録</div>
+      <div class="page-title" style="display:flex;align-items:center;justify-content:space-between;">
+        Tr運転記録
+        <button type="button" onclick="clearTr()"
+          style="font-size:12px;padding:4px 10px;background:var(--surface2);border:1px solid var(--accent);border-radius:6px;color:var(--accent);font-weight:600;cursor:pointer;font-family:inherit;">
+          入力欄クリア
+        </button>
+      </div>
       <div class="tr-grid" id="tr-grid"></div>
     </div>
 
     <!-- ── SCSR温度 ── -->
     <div class="page" id="page-scsr">
-      <div class="page-title">機器温度</div>
+      <div class="page-title" style="display:flex;align-items:center;justify-content:space-between;">
+        機器温度
+        <button type="button" onclick="clearScsr()"
+          style="font-size:12px;padding:4px 10px;background:var(--surface2);border:1px solid var(--accent);border-radius:6px;color:var(--accent);font-weight:600;cursor:pointer;font-family:inherit;">
+          入力欄クリア
+        </button>
+      </div>
       <div class="card">
         <div id="scsr-body"></div>
       </div>
@@ -2711,7 +2729,7 @@ trData.forEach((tr, i) => {
       </div>
     </div>
     <div class="tr-utilization">
-      <span style="color:var(--text-muted); font-size:12px;">利用率（自動計算）</span>
+      <span style="color:#ef4444; font-size:12px;">利用率（自動計算）</span>
       <span class="val" id="tr${n}_util"></span>
     </div>
   `;
@@ -3530,7 +3548,7 @@ function _imp8(d){
             📷 印鑑写真を選択
             <input type="file" id="hanko-photo-input" accept="image/*" style="display:none;" onchange="loadHankoPhoto(this)">
           </label>
-          <div style="font-size:11px;color:var(--text-muted);line-height:1.5;">実際の印鑑を白紙に押して写真を撮り登録してください。背景は自動的に白抜きされます。</div>
+          <div style="font-size:11px;color:var(--text-muted);line-height:1.5;">実際の印鑑を白紙に押して写真を撮り登録してください、背景は自動的に白抜きされます、写真サイズは縦横3〜5cm(実印サイズ程度)、解像度は普通。</div>
         </div>
       </div>
     </div>
@@ -3952,6 +3970,34 @@ function generateHankoPng(name) {
 }
 
 // ── 全フィールド初期化 ────────────────────────────────────
+// ── 入力欄クリア関数 ──────────────────────────────────
+function clearKouatsu() {
+  if (!confirm('高圧受電盤の入力欄をクリアします。よろしいですか？')) return;
+  ['kp_vrs','kp_vst','kp_vtr','kp_ir','kp_is','kp_it','kp_kw','kp_pf_select'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value = '';
+  });
+  var pf = document.getElementById('kp_pf_type'); if(pf) pf.value = '';
+  updatePfDisplay();
+}
+
+function clearTr() {
+  if (!confirm('Tr運転記録の入力欄をクリアします。よろしいですか？')) return;
+  for (var n = 1; n <= 10; n++) {
+    ['vrs','vst','vtr','ir','is','it','max','ma','temp'].forEach(function(f){
+      var el = document.getElementById('tr'+n+'_'+f); if(el) el.value = '';
+    });
+    var io = document.getElementById('tr'+n+'_io'); if(io) io.value = '';
+    var util = document.getElementById('tr'+n+'_util'); if(util) util.textContent = '';
+  }
+}
+
+function clearScsr() {
+  if (!confirm('機器温度の℃入力欄をクリアします。よろしいですか？')) return;
+  for (var i = 1; i <= 9; i++) {
+    var el = document.getElementById('scsr_temp_'+i); if(el) el.value = '';
+  }
+}
+
 function copyNowToPrev() {
   var now = document.getElementById('dm_now');
   var prev = document.getElementById('dm_prev');
