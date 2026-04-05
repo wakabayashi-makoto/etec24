@@ -792,6 +792,7 @@
             <label>力率 <span class="unit">%</span></label>
             <input type="text" inputmode="numeric" id="dm_pf" value=""
               oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,3)"
+              placeholder="FFなら100"
               style="font-size:18px; font-weight:600; text-align:right;">
           </div>
         </div>
@@ -1392,7 +1393,7 @@ async function exportToExcel() {
     const zip = await JSZip.loadAsync(bytes);
 
     // ── styles.xmlに罫線修正用の新規border/xfを追加 ────────────
-    var kekkaYellowSid = 0, kekkaRedSid = 0;
+    var kekkaYellowSid = {}, kekkaRedSid = {};
     {
       let stylesXml = await zip.file('xl/styles.xml').async('string');
 
@@ -1571,14 +1572,25 @@ async function exportToExcel() {
           if(sc){e=fsg+2;}else{const fc=cxInner2.indexOf('</xf>',s);e=fc>=0?fc+5:s+300;}
           a.push(cxInner2.slice(s,e));} return a; })();
       const kekkaXfBase = xfArr2.length;
-      const xf333base = xfArr2[333] || '<xf numFmtId="0" fontId="0" fillId="0" borderId="30" xfId="0"/>';
       const mkColorXf2 = (xf, fid) => xf.replace(/fillId="\d+"/, 'fillId="'+fid+'"').replace(/(xfId="[^"]*")/, '$1 applyFill="1"');
-      const xfYellow2 = mkColorXf2(xf333base, fillYellowId);
-      const xfRed2    = mkColorXf2(xf333base, fillRedId);
-      stylesXml = stylesXml.replace('</cellXfs>', xfYellow2 + xfRed2 + '</cellXfs>');
-      stylesXml = stylesXml.replace(/(<cellXfs count=")(\d+)(")/, (_, a, n, b) => a + (parseInt(n)+2) + b);
-      kekkaYellowSid = kekkaXfBase;
-      kekkaRedSid    = kekkaXfBase + 1;
+      // 全対象sidに対して黄色・赤のxfをそれぞれ生成（アライメント設定を保持）
+      const targetSids = [32,50,56,62,66,77,86,95,107,109,328,329,331,332,333,335,336,337,338,340,341,343,344,345];
+      var yellowMap = {}, redMap = {};
+      var colorXfs = '';
+      var colorCount = 0;
+      targetSids.forEach(function(sid) {
+        var baseXf = xfArr2[sid] || xfArr2[333] || '<xf numFmtId="0" fontId="0" fillId="0" borderId="30" xfId="0"/>';
+        yellowMap[sid] = kekkaXfBase + colorCount;
+        colorXfs += mkColorXf2(baseXf, fillYellowId);
+        colorCount++;
+        redMap[sid] = kekkaXfBase + colorCount;
+        colorXfs += mkColorXf2(baseXf, fillRedId);
+        colorCount++;
+      });
+      stylesXml = stylesXml.replace('</cellXfs>', colorXfs + '</cellXfs>');
+      stylesXml = stylesXml.replace(/(<cellXfs count=")(\d+)(")/, (_, a, n, b) => a + (parseInt(n)+colorCount) + b);
+      kekkaYellowSid = yellowMap;
+      kekkaRedSid    = redMap;
 
 
       zip.file('xl/styles.xml', stylesXml);
@@ -1874,24 +1886,24 @@ async function exportToExcel() {
             const sel = tr.querySelector('select');
             if (!sel) return;
             const val = sel.value;
-            const colorSid = val==='△' ? String(kekkaYellowSid) : val==='×' ? String(kekkaRedSid) : null;
+            const colorMap = val==='△' ? kekkaYellowSid : val==='×' ? kekkaRedSid : null;
 
             if (avIdx < avCells.length) {
               const row = avRows[avIdx];
               xml = setCell(xml, avCells[avIdx], val);
-              if (colorSid) {
-                xml = fixColorS(xml, avCells[avIdx], colorSid);   // AV列（判定）
-                xml = fixColorS(xml, 'C'+row, colorSid);           // C列（対象設備）
-                xml = fixColorS(xml, 'S'+row, colorSid);           // S列（点検項目）
+              if (colorMap) {
+                xml = fixColorS(xml, avCells[avIdx], colorMap);
+                xml = fixColorS(xml, 'C'+row, colorMap);
+                xml = fixColorS(xml, 'S'+row, colorMap);
               }
               avIdx++;
             } else if (ctIdx < ctCells.length) {
               const row = ctRows[ctIdx];
               xml = setCell(xml, ctCells[ctIdx], val);
-              if (colorSid) {
-                xml = fixColorS(xml, ctCells[ctIdx], colorSid);    // CT列（判定）
-                xml = fixColorS(xml, 'BA'+row, colorSid);          // BA列（対象設備）
-                xml = fixColorS(xml, 'BQ'+row, colorSid);          // BQ列（点検項目）
+              if (colorMap) {
+                xml = fixColorS(xml, ctCells[ctIdx], colorMap);
+                xml = fixColorS(xml, 'BA'+row, colorMap);
+                xml = fixColorS(xml, 'BQ'+row, colorMap);
               }
               ctIdx++;
             }
@@ -1996,11 +2008,15 @@ async function exportToExcel() {
       }
 
       // ── 罫線修正（スタイルID書き換え）─────────────────────────
-      // 色付け専用fixS（gbSidMapを通さない）
-      function fixColorS(x, addr, sid) {
+      // 色付け専用fixS（元sidに対応した色付けsidを使用）
+      function fixColorS(x, addr, sidMap) {
+        var m = x.match(new RegExp('<c r="' + addr + '"[ /][^>]*s="(\\d+)"'));
+        if (!m) return x;
+        var newSid = sidMap[parseInt(m[1])];
+        if (newSid === undefined) return x;
         return x.replace(
           new RegExp('(<c r="' + addr + '"[ /][^>]*)s="\\d+"', 'g'),
-          '$1s="' + sid + '"'
+          '$1s="' + newSid + '"'
         );
       }
 
@@ -3252,6 +3268,7 @@ function exportExcel() {
     a.click();
     document.body.removeChild(a);
     setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 1000);
+    clearAutoSave(); // JSON保存完了時に一時保存クリア
 
     // サインPNG保存（サインがある場合）
     var signImg = (typeof getSignData === 'function') ? getSignData() : '';
@@ -4008,6 +4025,7 @@ function copyNowToPrev() {
 }
 
 function initAllFields() {
+  clearAutoSave(); // 初期化時に一時保存クリア
   if (!confirm('入力内容を全て初期化します。\nよろしいですか？')) return;
 
   // 基本事項
@@ -4097,6 +4115,101 @@ function initAllFields() {
 }
 
 // ── JSON保存のみ（保存ボタン用）─────────────────────────
+// ── 自動一時保存 ─────────────────────────────────────────
+const AUTOSAVE_KEY = 'etec24_autosave';
+
+function autoSaveData() {
+  try {
+    // exportJsonOnlyと同じデータ収集（簡易版）
+    const name = document.getElementById('k_name')?.value === 'その他'
+      ? document.getElementById('k_name_other')?.value||''
+      : document.getElementById('k_name')?.value||'';
+    if (!name) return; // 事業場名が未入力なら保存しない
+    const snapshot = {};
+    // 全inputの値を収集
+    document.querySelectorAll('input[id], select[id], textarea[id]').forEach(function(el) {
+      if (el.id && el.type !== 'button' && el.type !== 'submit' && el.type !== 'checkbox') {
+        snapshot[el.id] = el.tagName === 'SELECT' ? el.value : el.value;
+      }
+    });
+    // 点検結果の判定
+    const tenken = [];
+    document.querySelectorAll('#tenken-table tbody tr:not(.section-row)').forEach(function(tr) {
+      const sel = tr.querySelector('select');
+      tenken.push(sel ? sel.value : '');
+    });
+    snapshot['_tenken_hantei'] = tenken;
+    // 電子サイン
+    const signCanvas = document.getElementById('sign-canvas');
+    if (signCanvas) {
+      try { snapshot['_sign'] = signCanvas.toDataURL(); } catch(e) {}
+    }
+    const saveObj = {
+      ts: new Date().toISOString(),
+      name: name,
+      data: snapshot
+    };
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(saveObj));
+  } catch(e) {}
+}
+
+function autoRestoreData(snapshot) {
+  try {
+    Object.keys(snapshot).forEach(function(id) {
+      if (id.startsWith('_')) return;
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (el.tagName === 'SELECT') {
+        el.value = snapshot[id];
+        el.dispatchEvent(new Event('change'));
+      } else {
+        el.value = snapshot[id];
+        el.dispatchEvent(new Event('input'));
+      }
+    });
+    // 点検結果の判定を復元
+    if (snapshot['_tenken_hantei']) {
+      var sels = document.querySelectorAll('#tenken-table tbody tr:not(.section-row) select');
+      snapshot['_tenken_hantei'].forEach(function(val, i) {
+        if (sels[i]) sels[i].value = val;
+      });
+    }
+  } catch(e) {}
+}
+
+function clearAutoSave() {
+  localStorage.removeItem(AUTOSAVE_KEY);
+}
+
+// 入力・変更のたびに自動保存（デバウンス1秒）
+var _autoSaveDebounce = null;
+function scheduleAutoSave() {
+  clearTimeout(_autoSaveDebounce);
+  _autoSaveDebounce = setTimeout(autoSaveData, 1000);
+}
+document.addEventListener('input', scheduleAutoSave);
+document.addEventListener('change', scheduleAutoSave);
+
+// ページ読み込み時に一時保存チェック
+window.addEventListener('load', function() {
+  try {
+    var saved = localStorage.getItem(AUTOSAVE_KEY);
+    if (!saved) return;
+    var obj = JSON.parse(saved);
+    if (!obj || !obj.name || !obj.data) return;
+    // 1時間以内のデータのみ復元提案
+    var ts = new Date(obj.ts);
+    var now = new Date();
+    if ((now - ts) > 3600000) { clearAutoSave(); return; }
+    var tsStr = ts.toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
+    if (confirm('【自動保存データあり】\n' + obj.name + '\n保存時刻: ' + tsStr + '\n\n入力途中のデータを復元しますか？')) {
+      autoRestoreData(obj.data);
+    } else {
+      clearAutoSave();
+    }
+  } catch(e) {}
+});
+
 function exportJsonOnly() {
   try {
     const name = document.getElementById('k_name').value === 'その他'
