@@ -944,7 +944,39 @@
           入力欄クリア
         </button>
       </div>
-      <div class="tr-grid" id="tr-grid"></div>
+      <!-- タブ切替 -->
+      <div style="display:flex;gap:4px;margin-bottom:10px;">
+        <button type="button" id="tr-tab-kiki" onclick="switchTrTab('kiki')"
+          style="flex:1;padding:8px 4px;font-size:12px;font-weight:700;border-radius:8px;border:2px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;">
+          Tr別入力
+        </button>
+        <button type="button" id="tr-tab-ma" onclick="switchTrTab('ma')"
+          style="flex:1;padding:8px 4px;font-size:12px;font-weight:700;border-radius:8px;border:2px solid var(--accent);background:var(--surface2);color:var(--accent);cursor:pointer;font-family:inherit;">
+          ⚡ I0/I0rだけ入力
+        </button>
+        <button type="button" id="tr-tab-temp" onclick="switchTrTab('temp')"
+          style="flex:1;padding:8px 4px;font-size:12px;font-weight:700;border-radius:8px;border:2px solid var(--accent);background:var(--surface2);color:var(--accent);cursor:pointer;font-family:inherit;">
+          🌡️ 温度だけ入力
+        </button>
+      </div>
+      <!-- 機器別タブ -->
+      <div id="tr-tab-kiki-body">
+        <div class="tr-grid" id="tr-grid"></div>
+      </div>
+      <!-- mAまとめタブ -->
+      <div id="tr-tab-ma-body" style="display:none;">
+        <div class="card">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">クランプメーターでI0/I0rを全Trまとめて入力。Tr別タブと自動連動します。</div>
+          <div id="tr-ma-list"></div>
+        </div>
+      </div>
+      <!-- 温度まとめタブ -->
+      <div id="tr-tab-temp-body" style="display:none;">
+        <div class="card">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">温度計で全Trをまとめて入力。Tr別タブと自動連動します。</div>
+          <div id="tr-temp-list"></div>
+        </div>
+      </div>
     </div>
 
     <!-- ── SCSR温度 ── -->
@@ -956,8 +988,29 @@
           入力欄クリア
         </button>
       </div>
-      <div class="card">
-        <div id="scsr-body"></div>
+      <!-- タブ切替 -->
+      <div style="display:flex;gap:4px;margin-bottom:10px;">
+        <button type="button" id="scsr-tab-kiki" onclick="switchScsrTab('kiki')"
+          style="flex:1;padding:8px 4px;font-size:12px;font-weight:700;border-radius:8px;border:2px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;">
+          機器別入力
+        </button>
+        <button type="button" id="scsr-tab-temp" onclick="switchScsrTab('temp')"
+          style="flex:1;padding:8px 4px;font-size:12px;font-weight:700;border-radius:8px;border:2px solid var(--accent);background:var(--surface2);color:var(--accent);cursor:pointer;font-family:inherit;">
+          🌡️ 温度だけ入力
+        </button>
+      </div>
+      <!-- 機器別タブ -->
+      <div id="scsr-tab-kiki-body">
+        <div class="card">
+          <div id="scsr-body"></div>
+        </div>
+      </div>
+      <!-- 温度まとめタブ -->
+      <div id="scsr-tab-temp-body" style="display:none;">
+        <div class="card">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">温度計で全機器をまとめて入力。機器別タブと自動連動します。</div>
+          <div id="scsr-temp-list"></div>
+        </div>
       </div>
     </div>
 
@@ -3990,6 +4043,115 @@ function generateHankoPng(name) {
 
 // ── 全フィールド初期化 ────────────────────────────────────
 // ── 入力欄クリア関数 ──────────────────────────────────
+// ── 測定器別まとめ入力タブ ──────────────────────────────
+
+// Trページ：タブ切替
+function switchTrTab(tab) {
+  var tabs = ['kiki','ma','temp'];
+  tabs.forEach(function(t) {
+    var body = document.getElementById('tr-tab-'+t+'-body');
+    var btn  = document.getElementById('tr-tab-'+t);
+    if (body) body.style.display = (t === tab) ? 'block' : 'none';
+    if (btn) {
+      btn.style.background = (t === tab) ? 'var(--accent)' : 'var(--surface2)';
+      btn.style.color      = (t === tab) ? '#fff' : 'var(--accent)';
+    }
+  });
+  if (tab === 'ma')   buildTrMaList();
+  if (tab === 'temp') buildTrTempList();
+}
+
+// mAまとめリストを生成
+function buildTrMaList() {
+  var list = document.getElementById('tr-ma-list');
+  if (!list) return;
+  var html = '';
+  for (var n = 1; n <= 10; n++) {
+    var maVal = (document.getElementById('tr'+n+'_ma') || {}).value || '';
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">';
+    html += '<div style="min-width:52px;font-size:14px;font-weight:700;color:var(--accent);">Tr'+n+'</div>';
+    html += '<input type="text" inputmode="decimal" value="'+maVal+'" placeholder="000.000"';
+    html += ' oninput="formatDecimalInput(this,3,3);syncTrMa('+n+',this.value)"';
+    html += ' style="flex:1;font-size:20px;font-weight:700;text-align:right;padding:10px 8px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);">';
+    html += '<span style="font-size:13px;color:var(--text-muted);min-width:24px;">mA</span>';
+    html += '</div>';
+  }
+  list.innerHTML = html;
+}
+
+// 温度まとめリストを生成（Tr用）
+function buildTrTempList() {
+  var list = document.getElementById('tr-temp-list');
+  if (!list) return;
+  var html = '';
+  for (var n = 1; n <= 10; n++) {
+    var tempVal = (document.getElementById('tr'+n+'_temp') || {}).value || '';
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">';
+    html += '<div style="min-width:52px;font-size:14px;font-weight:700;color:var(--accent);">Tr'+n+'</div>';
+    html += '<input type="number" inputmode="numeric" value="'+tempVal+'" placeholder="℃"';
+    html += ' oninput="syncTrTemp('+n+',this.value)"';
+    html += ' style="flex:1;font-size:20px;font-weight:700;text-align:right;padding:10px 8px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);">';
+    html += '<span style="font-size:13px;color:var(--text-muted);min-width:24px;">℃</span>';
+    html += '</div>';
+  }
+  list.innerHTML = html;
+}
+
+function syncTrMa(n, val) {
+  var el = document.getElementById('tr'+n+'_ma'); if (el) el.value = val;
+}
+function syncTrTemp(n, val) {
+  var el = document.getElementById('tr'+n+'_temp'); if (el) el.value = val;
+}
+
+// SCSRページ：タブ切替
+function switchScsrTab(tab) {
+  var kikiBody = document.getElementById('scsr-tab-kiki-body');
+  var tempBody = document.getElementById('scsr-tab-temp-body');
+  var kikiBtn  = document.getElementById('scsr-tab-kiki');
+  var tempBtn  = document.getElementById('scsr-tab-temp');
+  if (tab === 'kiki') {
+    kikiBody.style.display = 'block';
+    tempBody.style.display = 'none';
+    kikiBtn.style.background = 'var(--accent)'; kikiBtn.style.color = '#fff';
+    tempBtn.style.background = 'var(--surface2)'; tempBtn.style.color = 'var(--accent)';
+  } else {
+    kikiBody.style.display = 'none';
+    tempBody.style.display = 'block';
+    kikiBtn.style.background = 'var(--surface2)'; kikiBtn.style.color = 'var(--accent)';
+    tempBtn.style.background = 'var(--accent)'; tempBtn.style.color = '#fff';
+    buildScsrTempList();
+  }
+}
+
+// 温度まとめリストを生成
+function buildScsrTempList() {
+  var list = document.getElementById('scsr-temp-list');
+  if (!list) return;
+  var html = '';
+  for (var i = 1; i <= 9; i++) {
+    var nameEl = document.getElementById('scsr_name_'+i);
+    var tempEl = document.getElementById('scsr_temp_'+i);
+    var kvarEl = document.getElementById('scsr_kvar_'+i);
+    var name = nameEl ? nameEl.value : '';
+    var temp = tempEl ? tempEl.value : '';
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">';
+    html += '<div style="min-width:60px;font-size:13px;font-weight:700;color:var(--accent);">機器'+i+'</div>';
+    html += '<div style="font-size:13px;font-weight:600;color:var(--text);min-width:60px;">'+(name||'─')+'</div>';
+    html += '<input type="text" inputmode="numeric" value="'+temp+'" placeholder="℃"';
+    html += ' oninput="this.value=this.value.replace(/\\D/g,\'\').slice(0,2);syncScsrTemp(' + i + ',this.value)"';
+    html += ' style="width:70px;font-size:18px;font-weight:700;text-align:right;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);">';
+    html += '<span style="font-size:13px;color:var(--text-muted);">℃</span>';
+    html += '</div>';
+  }
+  list.innerHTML = html;
+}
+
+function syncScsrTemp(i, val) {
+  var el = document.getElementById('scsr_temp_'+i);
+  if (el) el.value = val;
+}
+
 function clearKouatsu() {
   if (!confirm('高圧受電盤の入力欄をクリアします。よろしいですか？')) return;
   ['kp_vrs','kp_vst','kp_vtr','kp_ir','kp_is','kp_it','kp_kw','kp_pf_select'].forEach(function(id){
@@ -4008,6 +4170,11 @@ function clearTr() {
     var io = document.getElementById('tr'+n+'_io'); if(io) io.value = '';
     var util = document.getElementById('tr'+n+'_util'); if(util) util.textContent = '';
   }
+  // まとめ入力画面も再描画してクリア反映
+  if (document.getElementById('tr-tab-ma-body') &&
+      document.getElementById('tr-tab-ma-body').style.display !== 'none') buildTrMaList();
+  if (document.getElementById('tr-tab-temp-body') &&
+      document.getElementById('tr-tab-temp-body').style.display !== 'none') buildTrTempList();
 }
 
 function clearScsr() {
@@ -4015,6 +4182,9 @@ function clearScsr() {
   for (var i = 1; i <= 9; i++) {
     var el = document.getElementById('scsr_temp_'+i); if(el) el.value = '';
   }
+  // まとめ入力画面も再描画してクリア反映
+  if (document.getElementById('scsr-tab-temp-body') &&
+      document.getElementById('scsr-tab-temp-body').style.display !== 'none') buildScsrTempList();
 }
 
 function copyNowToPrev() {
